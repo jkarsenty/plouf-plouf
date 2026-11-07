@@ -2,398 +2,548 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tirage au sort pondéré</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Plouf-plouf">
+<meta name="theme-color" content="#4f46e5">
+<title>Plouf-plouf</title>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, Roboto, Arial, sans-serif;
-    margin: 0; padding: 16px;
-    background: #f4f6f8; color: #222;
+  :root{
+    --bg:#f4f4f8;--card:#fff;--text:#1f2333;--muted:#6b7080;
+    --accent:#4f46e5;--accent2:#e8e7fd;--danger:#dc2626;--border:#e2e3ea;
   }
-  .carte {
-    background: #fff; border-radius: 14px;
-    padding: 16px; max-width: 600px; margin: 0 auto 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  }
-  h2 { margin-top: 0; text-align: center; }
-  textarea {
-    width: 100%; height: 140px; font-size: 16px;
-    padding: 10px; border: 1px solid #ccc; border-radius: 10px;
-  }
-  input[type=text], input[type=number] {
-    font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 8px;
-  }
-  .boutons { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-  button {
-    font-size: 17px; padding: 14px; border: none; border-radius: 10px;
-    background: #e3e8ee; color: #222; cursor: pointer;
-  }
-  button.principal { background: #2a7; color: #fff; font-weight: bold; font-size: 19px; }
-  button.danger { background: #fde4e4; color: #c0392b; }
-  button:active { opacity: .7; }
-  button:disabled { opacity: .5; }
-  #resultat {
-    font-size: 1.8em; font-weight: bold; color: #2a7;
-    text-align: center; margin: 14px 0 6px; word-break: break-word;
-    min-height: 1.4em;
-  }
-  .roue-zone {
-    position: relative; width: 100%; max-width: 360px;
-    margin: 18px auto 0; display: none;
-  }
-  .roue-zone.visible { display: block; }
-  canvas { width: 100%; height: auto; display: block; }
-  .pointeur {
-    position: absolute; top: -6px; left: 50%;
-    transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-top: 28px solid #d33;
-    filter: drop-shadow(0 2px 2px rgba(0,0,0,.3));
-    z-index: 2;
-  }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 16px; }
-  th, td { padding: 8px 4px; text-align: left; border-bottom: 1px solid #eee; }
-  th:not(:first-child), td:not(:first-child) { text-align: center; }
-  tr.absent td { color: #aaa; font-style: italic; }
-  .note { font-size: 13px; color: #777; margin-top: 8px; }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent}
+  .hidden{display:none!important}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
 
-  /* Section de gestion */
-  details summary {
-    font-size: 18px; font-weight: bold; cursor: pointer;
-    padding: 4px 0; list-style: none;
-  }
-  details summary::before { content: "▸ "; }
-  details[open] summary::before { content: "▾ "; }
-  .personne {
-    border: 1px solid #e3e8ee; border-radius: 10px;
-    padding: 10px; margin-top: 10px;
-  }
-  .personne .ligne { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .personne input[type=text] { flex: 1; min-width: 120px; }
-  .personne input[type=number] { width: 70px; text-align: center; }
-  .personne button { font-size: 18px; padding: 8px 14px; }
-  .ajout { display: flex; gap: 8px; margin-top: 12px; }
-  .ajout input { flex: 1; }
-  .ajout button { padding: 8px 16px; font-size: 16px; }
+  button{font:inherit;border:0;border-radius:12px;padding:14px 16px;font-size:1rem;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;width:100%;touch-action:manipulation}
+  button.secondary{background:var(--accent2);color:var(--accent)}
+  button.ghost{background:transparent;color:var(--muted);font-weight:500}
+  button.danger{background:#fde8e8;color:var(--danger)}
+  button:disabled{opacity:.45;cursor:default}
+  input,textarea{font:inherit;font-size:16px;border:1px solid var(--border);border-radius:12px;padding:12px;width:100%;background:#fff;color:var(--text)}
+  textarea{resize:vertical;min-height:140px}
+  input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+  /* Accueil */
+  #home{padding-top:calc(48px + env(safe-area-inset-top))}
+  .logo{font-size:3.2rem;text-align:center}
+  h1{font-size:1.9rem;margin:6px 0 4px;text-align:center}
+  .sub{text-align:center;color:var(--muted);margin:0 0 28px}
+  .choice{display:flex;align-items:center;gap:14px;text-align:left;background:var(--card);color:var(--text);padding:20px;margin-bottom:14px;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  .choice .ic{font-size:2rem}
+  .choice strong{display:block;font-size:1.15rem;margin-bottom:4px}
+  .choice small{display:block;color:var(--muted);font-weight:400;font-size:.92rem;line-height:1.35}
+
+  /* Barre d'onglets */
+  .topbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:rgba(244,244,248,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+  .home-btn{width:auto;background:var(--card);color:var(--text);padding:10px 12px;font-size:1.1rem}
+  .tabs{flex:1;display:flex;background:#e4e4ec;border-radius:12px;padding:4px;gap:4px}
+  .tab{background:transparent;color:var(--muted);padding:10px;border-radius:9px;font-size:.98rem}
+  .tab.active{background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+  /* Cartes */
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h2{margin:0 0 6px;font-size:1.3rem}
+  h3{margin:0 0 10px;font-size:1.1rem}
+  .hint{color:var(--muted);margin:0 0 14px;font-size:.93rem;line-height:1.4}
+  .hint.small{font-size:.85rem;margin:10px 0 0}
+  .lbl{display:block;font-weight:600;font-size:.92rem;margin:0 0 6px}
+  .setup .lbl+.stepper{margin-bottom:16px}
+  .setup textarea{margin-bottom:14px}
+
+  .stepper{display:flex;gap:8px;align-items:center}
+  .stepper button{width:52px;flex:none;padding:12px 0;font-size:1.3rem}
+  .stepper input{text-align:center;font-weight:600;font-size:1.1rem}
+
+  /* Session + roue */
+  .progress{text-align:center;font-weight:600;color:var(--accent);margin-bottom:10px}
+  .wheel-box{position:relative;width:min(100%,320px);margin:4px auto 14px}
+  .wheel-box canvas{display:block;width:100%;aspect-ratio:1/1}
+  .pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:26px solid #dc2626;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+  .result{text-align:center;font-size:1.6rem;min-height:2.2rem;margin-bottom:12px}
+  .result strong{color:var(--accent)}
+  .winners-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+  .winners{margin:0;padding-left:22px}
+  .winners li{padding:3px 0;font-weight:500}
+  .stop{margin-top:8px}
+
+  /* Tableau */
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:.82rem;padding:6px 4px;border-bottom:1px solid var(--border)}
+  td{padding:9px 4px;border-bottom:1px solid #f0f0f4}
+  td.num,th.num{text-align:right}
+  tr.absent td{color:#a5a8b5}
+  tr.won td:first-child{text-decoration:line-through;color:var(--muted)}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 7px;border-radius:20px;margin-left:6px;background:#eef0f4;color:var(--muted)}
+  .tag.new{background:#e6f6ee;color:#15803d}
+  .tag.won{background:var(--accent2);color:var(--accent)}
+
+  /* Gestion */
+  .manage summary{font-weight:700;font-size:1.05rem;cursor:pointer;list-style:none}
+  .manage summary::-webkit-details-marker{display:none}
+  .manage summary::after{content:"▾";float:right;color:var(--muted)}
+  .manage[open] summary::after{content:"▴"}
+  .mlist{margin-top:14px}
+  .mrow{display:flex;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f4}
+  .mrow .mname{flex:1;min-width:0;padding:10px}
+  .mrow .stepper{flex:none;gap:4px}
+  .mrow .stepper button{width:38px;padding:10px 0;font-size:1.1rem}
+  .mrow .stepper input{width:52px;padding:10px 4px}
+  .mrow .del{width:42px;flex:none;padding:10px 0;background:#fde8e8;font-size:1rem}
+  .madd{display:flex;gap:8px;margin:14px 0}
+  .madd button{width:auto;flex:none}
+  .mbtns{display:flex;gap:8px}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
-<div class="carte">
-  <h2>🎲 Tirage au sort pondéré</h2>
 
-  <p>Présents aujourd'hui, un nom par ligne :</p>
-  <textarea id="noms" placeholder="Alice&#10;Bob&#10;Chloé"></textarea>
-
-  <div class="boutons">
-    <button class="principal" id="btnTirer" onclick="tirer()">Tirer au sort</button>
-  </div>
-
-  <div class="roue-zone" id="roueZone">
-    <div class="pointeur"></div>
-    <canvas id="roue" width="500" height="500"></canvas>
-  </div>
-
-  <div id="resultat"></div>
-  <table id="tableau"></table>
-  <p class="note">Compteur = valeur actuelle. Chances = probabilité au prochain tirage parmi les présents (compteur + 1). Les absents (en gris) gardent leur compteur.</p>
+<!-- Écran d'accueil -->
+<div id="home" class="wrap">
+  <div class="logo">🎯</div>
+  <h1>Plouf-plouf</h1>
+  <p class="sub">Quel tirage veux-tu faire ?</p>
+  <button class="choice" data-go="classic">
+    <span class="ic">🎲</span>
+    <span><strong>Tirage classique</strong><small>Tout le monde a la même chance. Aucun compteur d'une soirée à l'autre.</small></span>
+  </button>
+  <button class="choice" data-go="weighted">
+    <span class="ic">⚖️</span>
+    <span><strong>Tirage pondéré</strong><small>Ceux qui n'ont pas été tirés depuis longtemps ont plus de chances.</small></span>
+  </button>
 </div>
 
-<div class="carte">
-  <details id="gestion">
-    <summary>⚙️ Gérer les personnes</summary>
-
-    <div class="ajout">
-      <input type="text" id="nouveauNom" placeholder="Ajouter une personne">
-      <button onclick="ajouterPersonne()">Ajouter</button>
+<!-- Application -->
+<div id="app" class="hidden">
+  <nav class="topbar">
+    <button class="home-btn" data-go="home" aria-label="Accueil">🏠</button>
+    <div class="tabs">
+      <button class="tab" data-view="classic" data-go="classic">Classique</button>
+      <button class="tab" data-view="weighted" data-go="weighted">Pondéré</button>
     </div>
-
-    <div id="listeGestion"></div>
-
-    <div class="boutons">
-      <button id="btnReset" onclick="reinitialiser()">Tout remettre à 0</button>
-      <button class="danger" onclick="toutOublier()">Tout supprimer</button>
-    </div>
-  </details>
+  </nav>
+  <div class="wrap">
+    <section id="panel-classic"></section>
+    <section id="panel-weighted"></section>
+  </div>
 </div>
 
 <script>
-let compteurs = JSON.parse(localStorage.getItem("compteurs") || "{}");
-let presents = JSON.parse(localStorage.getItem("presents") || "null");
-if (presents === null) presents = Object.keys(compteurs);
+(function(){
+  "use strict";
 
-document.getElementById("noms").value = presents.join("\n");
-afficher();
-afficherGestion();
-
-const COULEURS = ["#e6194b","#3cb44b","#4363d8","#f58231","#911eb4",
-                  "#17a2b8","#f032e6","#9a6324","#808000","#008080"];
-let angleActuel = 0;
-let enRotation = false;
-
-function echapper(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function lireNoms() {
-  const liste = document.getElementById("noms").value
-    .split("\n").map(n => n.trim()).filter(n => n);
-  return [...new Set(liste)];
-}
-
-function dessinerRoue(noms, poidsTirage, angle) {
-  const canvas = document.getElementById("roue");
-  const ctx = canvas.getContext("2d");
-  const cx = canvas.width / 2, cy = canvas.height / 2;
-  const rayon = cx - 6;
-  const total = noms.reduce((s, n) => s + poidsTirage[n], 0);
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  let debut = angle;
-
-  noms.forEach((nom, i) => {
-    const part = (poidsTirage[nom] / total) * 2 * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, rayon, debut, debut + part);
-    ctx.closePath();
-    ctx.fillStyle = COULEURS[i % COULEURS.length];
-    ctx.fill();
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(debut + part / 2);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 26px sans-serif";
-    ctx.fillText(nom.length > 12 ? nom.slice(0, 11) + "…" : nom, rayon - 16, 9);
-    ctx.restore();
-
-    debut += part;
-  });
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
-  ctx.fillStyle = "#fff";
-  ctx.fill();
-  ctx.strokeStyle = "#ccc";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-}
-
-function tirer() {
-  if (enRotation) return;
-  const noms = lireNoms();
-  if (noms.length === 0) return;
-
-  presents = noms;
-
-  noms.forEach(n => { if (!(n in compteurs)) compteurs[n] = 0; });
-  noms.forEach(n => compteurs[n] += 1);
-
-  const poidsTirage = {};
-  noms.forEach(n => poidsTirage[n] = Math.max(compteurs[n], 1));
-
-  const total = noms.reduce((s, n) => s + poidsTirage[n], 0);
-  let r = Math.random() * total;
-  let gagnant = noms[noms.length - 1];
-  for (const n of noms) {
-    r -= poidsTirage[n];
-    if (r < 0) { gagnant = n; break; }
+  /* ---------- Outils ---------- */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  const low = s => s.toLowerCase();
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function parseNames(txt){
+    const seen = new Set(), out = [];
+    (txt || "").split("\n").forEach(n => {
+      n = n.trim();
+      if(n && !seen.has(low(n))){ seen.add(low(n)); out.push(n); }
+    });
+    return out;
   }
 
-  compteurs[gagnant] -= 1;
-  sauver();
-  afficherGestion();
-
-  lancerRoue(noms, poidsTirage, gagnant, total);
-}
-
-function lancerRoue(noms, poidsTirage, gagnant, total) {
-  enRotation = true;
-  document.getElementById("btnTirer").disabled = true;
-  document.getElementById("btnReset").disabled = true;
-  document.getElementById("resultat").textContent = "";
-  document.getElementById("roueZone").classList.add("visible");
-
-  let cumul = 0;
-  for (const n of noms) {
-    if (n === gagnant) break;
-    cumul += poidsTirage[n];
-  }
-  const milieuPart = (cumul + poidsTirage[gagnant] / 2) / total * 2 * Math.PI;
-
-  const largeurPart = poidsTirage[gagnant] / total * 2 * Math.PI;
-  const decalage = (Math.random() - 0.5) * largeurPart * 0.7;
-  const toursComplets = 5 + Math.floor(Math.random() * 3);
-  const cible = -Math.PI / 2 - milieuPart - decalage;
-
-  const depart = angleActuel;
-  let delta = (cible - depart) % (2 * Math.PI);
-  if (delta < 0) delta += 2 * Math.PI;
-  const arrivee = depart + delta + toursComplets * 2 * Math.PI;
-
-  const duree = 4500;
-  const t0 = performance.now();
-
-  function frame(t) {
-    const p = Math.min((t - t0) / duree, 1);
-    const ease = 1 - Math.pow(1 - p, 4);
-    angleActuel = depart + (arrivee - depart) * ease;
-    dessinerRoue(noms, poidsTirage, angleActuel);
-
-    if (p < 1) {
-      requestAnimationFrame(frame);
-    } else {
-      enRotation = false;
-      document.getElementById("btnTirer").disabled = false;
-      document.getElementById("btnReset").disabled = false;
-      document.getElementById("resultat").textContent = "🎉 " + gagnant;
-      afficher();
+  /* ---------- Reprise des compteurs de l'ancienne version ---------- */
+  function extractPeople(v){
+    if(!v || typeof v !== "object") return null;
+    if(Array.isArray(v)){
+      const out = [];
+      for(const it of v){
+        if(!it || typeof it !== "object" || Array.isArray(it)) return null;
+        const ent = Object.entries(it);
+        const name = ent.find(([k,x]) => typeof x === "string");
+        const nums = ent.filter(([k,x]) => typeof x === "number");
+        if(!name || !nums.length) return null;
+        const pref = nums.find(([k]) => /compt|count|poids|weight|score|chance|point/i.test(k)) || nums[0];
+        out.push({ name: name[1].trim(), count: Math.round(pref[1]) });
+      }
+      return out.filter(p => p.name);
     }
+    const ent = Object.entries(v);
+    if(ent.length && ent.every(([k,x]) => typeof x === "number"))
+      return ent.map(([k,x]) => ({ name: k.trim(), count: Math.round(x) })).filter(p => p.name);
+    for(const x of Object.values(v)){
+      if(x && typeof x === "object"){ const r = extractPeople(x); if(r && r.length) return r; }
+    }
+    return null;
   }
-  requestAnimationFrame(frame);
-}
-
-/* ---------- Gestion des personnes ---------- */
-
-function afficherGestion() {
-  const noms = Object.keys(compteurs);
-  let html = "";
-  if (noms.length === 0) {
-    html = '<p class="note">Aucune personne en mémoire pour l\'instant.</p>';
-  }
-  noms.forEach((n, i) => {
-    html += `
-      <div class="personne">
-        <div class="ligne">
-          <input type="text" id="nom_${i}" value="${echapper(n)}"
-                 onchange="renommer(${i})">
-          <button class="danger" onclick="supprimer(${i})">🗑</button>
-        </div>
-        <div class="ligne">
-          <span>Compteur :</span>
-          <button onclick="ajuster(${i}, -1)">−</button>
-          <input type="number" id="cpt_${i}" value="${compteurs[n]}"
-                 onchange="fixer(${i})">
-          <button onclick="ajuster(${i}, 1)">+</button>
-        </div>
-      </div>`;
-  });
-  document.getElementById("listeGestion").innerHTML = html;
-}
-
-function nomParIndex(i) {
-  return Object.keys(compteurs)[i];
-}
-
-function ajuster(i, delta) {
-  if (enRotation) return;
-  const n = nomParIndex(i);
-  compteurs[n] += delta;
-  sauver(); afficher(); afficherGestion();
-}
-
-function fixer(i) {
-  if (enRotation) return;
-  const n = nomParIndex(i);
-  const v = parseInt(document.getElementById("cpt_" + i).value, 10);
-  compteurs[n] = isNaN(v) ? 0 : v;
-  sauver(); afficher(); afficherGestion();
-}
-
-function renommer(i) {
-  if (enRotation) return;
-  const ancien = nomParIndex(i);
-  const nouveau = document.getElementById("nom_" + i).value.trim();
-  if (!nouveau || nouveau === ancien) { afficherGestion(); return; }
-  if (nouveau in compteurs) {
-    alert("Ce nom existe déjà.");
-    afficherGestion();
-    return;
+  function migrateOld(){
+    const found = [];
+    try{
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(!k || k.indexOf("plouf2_") === 0) continue;
+        let v; try{ v = JSON.parse(localStorage.getItem(k)); }catch(e){ continue; }
+        const p = extractPeople(v);
+        if(p && p.length) found.push(p);
+      }
+    }catch(e){}
+    found.sort((a,b) => b.length - a.length);
+    return found[0] || [];
   }
 
-  // On reconstruit l'objet pour garder l'ordre
-  const refait = {};
-  Object.keys(compteurs).forEach(n => {
-    refait[n === ancien ? nouveau : n] = compteurs[n];
+  /* ---------- Roue ---------- */
+  const COLORS = ["#6366f1","#f59e0b","#10b981","#ef4444","#3b82f6","#ec4899","#14b8a6","#8b5cf6","#f97316","#22c55e","#0ea5e9","#e11d48"];
+  const TWO = Math.PI * 2;
+
+  function Wheel(canvas){
+    const ctx = canvas.getContext("2d");
+    let angle = 0, items = [], weights = [];
+
+    function layout(){
+      const total = weights.reduce((a,b) => a + b, 0) || 1;
+      let acc = 0;
+      return items.map((n,i) => { const s = acc / total * TWO; acc += weights[i]; return { name:n, start:s, end: acc / total * TWO }; });
+    }
+    function draw(){
+      const w = canvas.clientWidth; if(!w) return;
+      const dpr = window.devicePixelRatio || 1;
+      const px = Math.round(w * dpr);
+      if(canvas.width !== px){ canvas.width = px; canvas.height = px; }
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      const r = w / 2;
+      ctx.clearRect(0,0,w,w);
+      ctx.save(); ctx.translate(r,r); ctx.rotate(angle);
+      const sl = layout();
+      if(!sl.length){ ctx.beginPath(); ctx.arc(0,0,r-2,0,TWO); ctx.fillStyle = "#e2e3ea"; ctx.fill(); }
+      sl.forEach((s,i) => {
+        const a0 = s.start - Math.PI/2, a1 = s.end - Math.PI/2;
+        let c = COLORS[i % COLORS.length];
+        if(sl.length > 1 && i === sl.length - 1 && i % COLORS.length === 0) c = COLORS[5];
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r-2,a0,a1); ctx.closePath();
+        ctx.fillStyle = c; ctx.fill();
+        if(sl.length > 1){ ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
+        const span = a1 - a0;
+        if(span * r * 0.6 < 11) return;
+        ctx.save(); ctx.rotate((a0 + a1) / 2);
+        const fs = Math.min(18, Math.max(11, span * r * 0.4));
+        ctx.font = "600 " + fs + "px -apple-system,BlinkMacSystemFont,sans-serif";
+        ctx.fillStyle = "#fff"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        const maxW = r * 0.68;
+        let t = s.name;
+        if(ctx.measureText(t).width > maxW){
+          while(t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0,-1);
+          t += "…";
+        }
+        ctx.fillText(t, r - 14, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(r,r,r*0.1,0,TWO); ctx.fillStyle = "#fff"; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = "#e2e3ea"; ctx.stroke();
+    }
+    function spinTo(index, done){
+      const s = layout()[index];
+      const p = s.start + (s.end - s.start) * (0.2 + Math.random() * 0.6);
+      const base = -p;
+      const k = Math.ceil((angle + 5 * TWO - base) / TWO);
+      const target = base + k * TWO, from = angle, dur = 4500, t0 = performance.now();
+      function step(now){
+        const t = Math.min(1, (now - t0) / dur);
+        const e = 1 - Math.pow(1 - t, 3);
+        angle = from + (target - from) * e;
+        draw();
+        if(t < 1) requestAnimationFrame(step);
+        else { angle = ((angle % TWO) + TWO) % TWO; draw(); done(); }
+      }
+      requestAnimationFrame(step);
+    }
+    return { setItems(it, w){ items = it.slice(); weights = w.slice(); draw(); }, draw, spinTo };
+  }
+
+  /* ---------- Gabarit d'un onglet ---------- */
+  function panelHTML(weighted){
+    return `
+    <div class="card setup">
+      <h2>${weighted ? "Tirage pondéré" : "Tirage classique"}</h2>
+      <p class="hint">${weighted
+        ? "Mets uniquement les présents du jour. Les absents gardent leur compteur sans bouger."
+        : "Chacun a la même chance. Pas de compteur, seule la liste des noms est gardée."}
+        Dans une même session, personne n'est tiré deux fois.</p>
+      <label class="lbl">Présents (un nom par ligne)</label>
+      <textarea class="names" rows="7" placeholder="Alice&#10;Bob&#10;Jérémy" autocapitalize="words" autocorrect="off" spellcheck="false"></textarea>
+      <label class="lbl">Nombre de tirages ce soir</label>
+      <div class="stepper">
+        <button type="button" class="secondary nb-minus" aria-label="Moins">−</button>
+        <input class="nb" type="number" min="1" inputmode="numeric">
+        <button type="button" class="secondary nb-plus" aria-label="Plus">+</button>
+      </div>
+      <button type="button" class="start">Commencer la session</button>
+    </div>
+
+    <div class="card session hidden">
+      <div class="progress"></div>
+      <div class="wheel-box"><div class="pointer"></div><canvas></canvas></div>
+      <div class="result" aria-live="polite"></div>
+      <button type="button" class="draw">Lancer le tirage</button>
+      <div class="winners-box hidden"><span class="lbl">Tirés ce soir</span><ol class="winners"></ol></div>
+      <button type="button" class="ghost stop">Arrêter la session</button>
+    </div>
+
+    ${weighted ? `
+    <div class="card">
+      <h3>Compteurs</h3>
+      <table>
+        <thead><tr><th>Nom</th><th class="num">Compteur</th><th class="num">Chances</th></tr></thead>
+        <tbody class="tbody"></tbody>
+      </table>
+      <p class="hint small">« Chances » = probabilité au prochain tirage. Le +1 des présents est ajouté une fois, au début de chaque session.</p>
+    </div>
+    <details class="card manage">
+      <summary>Gérer les personnes</summary>
+      <div class="mlist"></div>
+      <div class="madd">
+        <input class="addname" type="text" placeholder="Nouveau nom" autocapitalize="words">
+        <button type="button" class="secondary addbtn">Ajouter</button>
+      </div>
+      <div class="mbtns">
+        <button type="button" class="secondary resetall">Tout à 0</button>
+        <button type="button" class="danger delall">Tout supprimer</button>
+      </div>
+    </details>` : ""}`;
+  }
+
+  /* ---------- Un onglet (classique ou pondéré) ---------- */
+  function createMode(id, weighted){
+    const KEY = "plouf2_" + id, SKEY = "plouf2_session_" + id;
+    const el = document.getElementById("panel-" + id);
+    el.innerHTML = panelHTML(weighted);
+    const q = s => el.querySelector(s);
+
+    let data = store.get(KEY, null);
+    if(!data){
+      data = { names: "", draws: 1, people: [] };
+      if(weighted){
+        const old = migrateOld();
+        if(old.length){ data.people = old; data.names = old.map(p => p.name).join("\n"); }
+      }
+    }
+    data.people = data.people || [];
+    let session = store.get(SKEY, null);
+    let spinning = false;
+
+    const wheel = Wheel(q("canvas"));
+    const ta = q(".names"), nb = q(".nb");
+    ta.value = data.names || "";
+    nb.value = data.draws || 1;
+
+    const save = () => { store.set(KEY, data); store.set(SKEY, session); };
+    const findP = n => data.people.find(p => low(p.name) === low(n));
+    const ensureP = n => { let p = findP(n); if(!p){ p = { name: n, count: 0 }; data.people.push(p); } return p; };
+    const hasWon = n => !!session && session.winners.some(w => low(w) === low(n));
+    const remaining = () => session ? session.present.filter(n => !hasWon(n)) : [];
+    const finished = () => !!session && (session.winners.length >= session.total || !remaining().length);
+    const weightOf = n => { if(!weighted) return 1; const p = findP(n); return Math.max(1, p ? p.count : 0); };
+
+    /* Nombre de tirages */
+    function setDraws(v){ v = Math.max(1, parseInt(v, 10) || 1); nb.value = v; data.draws = v; save(); }
+    q(".nb-minus").onclick = () => setDraws((parseInt(nb.value,10) || 1) - 1);
+    q(".nb-plus").onclick = () => setDraws((parseInt(nb.value,10) || 1) + 1);
+    nb.onchange = () => setDraws(nb.value);
+
+    ta.oninput = () => { data.names = ta.value; save(); if(weighted) renderTable(); };
+
+    /* Démarrer une session */
+    q(".start").onclick = () => {
+      const names = parseNames(ta.value);
+      if(!names.length){ alert("Ajoute au moins un nom."); return; }
+      let n = Math.max(1, parseInt(nb.value, 10) || 1);
+      if(n > names.length) n = names.length;
+      setDraws(n);
+      if(weighted) names.forEach(nm => { ensureP(nm).count += 1; });
+      session = { present: names, total: n, winners: [] };
+      q(".result").textContent = "";
+      save(); render();
+      q(".session").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    /* Tirer (ou relancer une nouvelle session à la fin) */
+    q(".draw").onclick = () => {
+      if(spinning || !session) return;
+      if(finished()){
+        session = null; q(".result").textContent = "";
+        save(); render();
+        return;
+      }
+      const cands = remaining();
+      const ws = cands.map(weightOf);
+      let r = Math.random() * ws.reduce((a,b) => a + b, 0), idx = 0;
+      while(idx < ws.length - 1 && r >= ws[idx]){ r -= ws[idx]; idx++; }
+      spinning = true;
+      q(".result").textContent = "";
+      wheel.setItems(cands, ws);
+      lock();
+      wheel.spinTo(idx, () => {
+        const w = cands[idx];
+        session.winners.push(w);
+        if(weighted){ const p = findP(w); if(p) p.count -= 1; }
+        spinning = false;
+        save();
+        q(".result").innerHTML = "🎉 <strong>" + esc(w) + "</strong>";
+        render(false);
+      });
+    };
+
+    q(".stop").onclick = () => {
+      if(spinning) return;
+      if(!confirm("Arrêter la session ? Les tirages déjà faits restent comptés.")) return;
+      session = null; q(".result").textContent = "";
+      save(); render();
+    };
+
+    function lock(){
+      q(".draw").disabled = spinning;
+      q(".stop").disabled = spinning;
+    }
+
+    /* ---------- Affichage ---------- */
+    function render(updateWheel){
+      if(updateWheel === undefined) updateWheel = true;
+      const active = !!session;
+      q(".setup").classList.toggle("hidden", active);
+      q(".session").classList.toggle("hidden", !active);
+      if(active){
+        const done = session.winners.length, fin = finished();
+        q(".progress").textContent = fin
+          ? "Session terminée · " + done + " tirage" + (done > 1 ? "s" : "")
+          : "Tirage " + (done + 1) + " sur " + session.total;
+        q(".draw").textContent = fin ? "Nouvelle session" : (done ? "Tirage suivant" : "Lancer le tirage");
+        q(".stop").classList.toggle("hidden", fin);
+        q(".winners-box").classList.toggle("hidden", !done);
+        q(".winners").innerHTML = session.winners.map(w => "<li>" + esc(w) + "</li>").join("");
+        if(updateWheel){
+          const list = fin ? session.present : remaining();
+          wheel.setItems(list, list.map(weightOf));
+        }
+      }
+      lock();
+      if(weighted){ renderTable(); renderManage(); }
+    }
+
+    function renderTable(){
+      const present = session ? session.present : parseNames(ta.value);
+      const projected = !session || finished();
+      const eligible = projected ? parseNames(ta.value) : remaining();
+      const wNext = n => { const p = findP(n); const c = p ? p.count : 0; return Math.max(1, projected ? c + 1 : c); };
+      const tot = eligible.reduce((a,n) => a + wNext(n), 0);
+      const isEligible = n => eligible.some(e => low(e) === low(n));
+      let html = "";
+      present.forEach(n => {
+        const p = findP(n);
+        const won = !projected && hasWon(n);
+        const chance = isEligible(n) && tot ? Math.round(wNext(n) / tot * 1000) / 10 + " %" : "—";
+        html += `<tr class="${won ? "won" : ""}"><td>${esc(p ? p.name : n)}${!p ? '<span class="tag new">nouveau</span>' : ""}${won ? '<span class="tag won">tiré</span>' : ""}</td>`
+              + `<td class="num">${p ? p.count : 0}</td><td class="num">${won ? "—" : chance}</td></tr>`;
+      });
+      data.people.filter(p => !present.some(n => low(n) === low(p.name))).forEach(p => {
+        html += `<tr class="absent"><td>${esc(p.name)}<span class="tag">absent</span></td><td class="num">${p.count}</td><td class="num">—</td></tr>`;
+      });
+      q(".tbody").innerHTML = html || '<tr><td colspan="3" class="muted">Ajoute des noms pour commencer.</td></tr>';
+    }
+
+    function replaceLine(oldName, newName){
+      ta.value = ta.value.split("\n")
+        .map(l => low(l.trim()) === low(oldName) ? newName : l)
+        .join("\n");
+      data.names = ta.value;
+    }
+
+    function renderManage(){
+      const list = q(".mlist");
+      list.innerHTML = "";
+      if(!data.people.length){ list.innerHTML = '<p class="muted">Personne en mémoire pour l\'instant.</p>'; return; }
+      data.people.forEach(p => {
+        const row = document.createElement("div");
+        row.className = "mrow";
+        row.innerHTML = `<input class="mname" type="text" autocapitalize="words">
+          <div class="stepper"><button type="button" class="secondary m-minus" aria-label="Moins">−</button>
+          <input class="mcount" type="number" inputmode="numeric"><button type="button" class="secondary m-plus" aria-label="Plus">+</button></div>
+          <button type="button" class="del" aria-label="Supprimer">🗑️</button>`;
+        const nameIn = $(".mname", row), countIn = $(".mcount", row);
+        nameIn.value = p.name; countIn.value = p.count;
+        $(".m-minus", row).onclick = () => { p.count -= 1; save(); render(false); };
+        $(".m-plus", row).onclick = () => { p.count += 1; save(); render(false); };
+        countIn.onchange = () => { const v = parseInt(countIn.value, 10); if(!isNaN(v)) p.count = v; save(); render(false); };
+        nameIn.onchange = () => rename(p, nameIn.value);
+        $(".del", row).onclick = () => {
+          if(!confirm("Supprimer " + p.name + " définitivement ?")) return;
+          data.people = data.people.filter(x => x !== p);
+          ta.value = ta.value.split("\n").filter(l => low(l.trim()) !== low(p.name)).join("\n");
+          data.names = ta.value;
+          if(session) session.present = session.present.filter(n => low(n) !== low(p.name));
+          save(); render(!spinning);
+        };
+        list.appendChild(row);
+      });
+    }
+
+    function rename(p, newName){
+      newName = newName.trim();
+      const old = p.name;
+      if(!newName || newName === old){ render(false); return; }
+      const other = findP(newName);
+      if(other && other !== p){ alert("« " + newName + " » existe déjà."); render(false); return; }
+      p.name = newName;
+      replaceLine(old, newName);
+      if(session){
+        const fix = arr => arr.map(n => low(n) === low(old) ? newName : n);
+        session.present = fix(session.present);
+        session.winners = fix(session.winners);
+      }
+      save(); render(!spinning);
+    }
+
+    if(weighted){
+      const addIn = q(".addname");
+      const add = () => {
+        const n = addIn.value.trim(); if(!n) return;
+        if(findP(n)){ alert("« " + n + " » existe déjà."); return; }
+        data.people.push({ name: n, count: 0 });
+        addIn.value = ""; save(); render(false);
+      };
+      q(".addbtn").onclick = add;
+      addIn.onkeydown = e => { if(e.key === "Enter") add(); };
+      q(".resetall").onclick = () => {
+        if(!confirm("Remettre tous les compteurs à 0 ?")) return;
+        data.people.forEach(p => p.count = 0); save(); render(!spinning);
+      };
+      q(".delall").onclick = () => {
+        if(!confirm("Supprimer toutes les personnes de la mémoire ?")) return;
+        data.people = []; save(); render(!spinning);
+      };
+    }
+
+    save();
+    render();
+    return { show(){ wheel.draw(); }, draw(){ wheel.draw(); } };
+  }
+
+  /* ---------- Navigation ---------- */
+  const modes = { classic: createMode("classic", false), weighted: createMode("weighted", true) };
+
+  function go(view){
+    $("#home").classList.toggle("hidden", view !== "home");
+    $("#app").classList.toggle("hidden", view === "home");
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+    ["classic","weighted"].forEach(v => $("#panel-" + v).classList.toggle("hidden", v !== view));
+    if(modes[view]) modes[view].show();
+    window.scrollTo(0, 0);
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-go]");
+    if(b) go(b.dataset.go);
   });
-  compteurs = refait;
-  presents = presents.map(n => n === ancien ? nouveau : n);
-  document.getElementById("noms").value = document.getElementById("noms").value
-    .split("\n").map(l => l.trim() === ancien ? nouveau : l).join("\n");
-
-  sauver(); afficher(); afficherGestion();
-}
-
-function supprimer(i) {
-  if (enRotation) return;
-  const n = nomParIndex(i);
-  if (!confirm("Supprimer " + n + " définitivement ?")) return;
-  delete compteurs[n];
-  presents = presents.filter(p => p !== n);
-  document.getElementById("noms").value = document.getElementById("noms").value
-    .split("\n").filter(l => l.trim() !== n).join("\n");
-  sauver(); afficher(); afficherGestion();
-}
-
-function ajouterPersonne() {
-  const champ = document.getElementById("nouveauNom");
-  const n = champ.value.trim();
-  if (!n) return;
-  if (n in compteurs) { alert("Ce nom existe déjà."); return; }
-  compteurs[n] = 0;
-  champ.value = "";
-  sauver(); afficher(); afficherGestion();
-}
-
-function reinitialiser() {
-  if (enRotation) return;
-  if (!confirm("Remettre tous les compteurs à 0 ?")) return;
-  Object.keys(compteurs).forEach(n => compteurs[n] = 0);
-  sauver(); afficher(); afficherGestion();
-  document.getElementById("resultat").textContent = "";
-  document.getElementById("roueZone").classList.remove("visible");
-}
-
-function toutOublier() {
-  if (enRotation) return;
-  if (!confirm("Supprimer toutes les personnes et tous les compteurs ?")) return;
-  compteurs = {};
-  presents = [];
-  document.getElementById("noms").value = "";
-  sauver(); afficher(); afficherGestion();
-  document.getElementById("resultat").textContent = "";
-  document.getElementById("roueZone").classList.remove("visible");
-}
-
-function sauver() {
-  localStorage.setItem("compteurs", JSON.stringify(compteurs));
-  localStorage.setItem("presents", JSON.stringify(presents));
-}
-
-function afficher() {
-  const totalPresents = presents.reduce(
-    (s, n) => s + Math.max((compteurs[n] ?? 0) + 1, 1), 0);
-  let html = "<tr><th>Nom</th><th>Compteur</th><th>Chances</th></tr>";
-
-  presents.forEach(n => {
-    const c = compteurs[n] ?? 0;
-    const pct = totalPresents ? Math.round(Math.max(c + 1, 1) / totalPresents * 100) : 0;
-    html += `<tr><td>${echapper(n)}</td><td>${c}</td><td>${pct} %</td></tr>`;
-  });
-  Object.keys(compteurs).filter(n => !presents.includes(n)).forEach(n => {
-    html += `<tr class="absent"><td>${echapper(n)} (absent)</td><td>${compteurs[n]}</td><td>–</td></tr>`;
-  });
-
-  document.getElementById("tableau").innerHTML = html;
-}
+  window.addEventListener("resize", () => { modes.classic.draw(); modes.weighted.draw(); });
+})();
 </script>
 </body>
 </html>
