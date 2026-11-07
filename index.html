@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tirage au sort pondéré</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Roboto, Arial, sans-serif;
+    margin: 0; padding: 16px;
+    background: #f4f6f8; color: #222;
+  }
+  .carte {
+    background: #fff; border-radius: 14px;
+    padding: 16px; max-width: 600px; margin: 0 auto 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  h2 { margin-top: 0; text-align: center; }
+  textarea {
+    width: 100%; height: 140px; font-size: 16px;
+    padding: 10px; border: 1px solid #ccc; border-radius: 10px;
+  }
+  input[type=text], input[type=number] {
+    font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 8px;
+  }
+  .boutons { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  button {
+    font-size: 17px; padding: 14px; border: none; border-radius: 10px;
+    background: #e3e8ee; color: #222; cursor: pointer;
+  }
+  button.principal { background: #2a7; color: #fff; font-weight: bold; font-size: 19px; }
+  button.danger { background: #fde4e4; color: #c0392b; }
+  button:active { opacity: .7; }
+  button:disabled { opacity: .5; }
+  #resultat {
+    font-size: 1.8em; font-weight: bold; color: #2a7;
+    text-align: center; margin: 14px 0 6px; word-break: break-word;
+    min-height: 1.4em;
+  }
+  .roue-zone {
+    position: relative; width: 100%; max-width: 360px;
+    margin: 18px auto 0; display: none;
+  }
+  .roue-zone.visible { display: block; }
+  canvas { width: 100%; height: auto; display: block; }
+  .pointeur {
+    position: absolute; top: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 28px solid #d33;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.3));
+    z-index: 2;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 16px; }
+  th, td { padding: 8px 4px; text-align: left; border-bottom: 1px solid #eee; }
+  th:not(:first-child), td:not(:first-child) { text-align: center; }
+  tr.absent td { color: #aaa; font-style: italic; }
+  .note { font-size: 13px; color: #777; margin-top: 8px; }
+
+  /* Section de gestion */
+  details summary {
+    font-size: 18px; font-weight: bold; cursor: pointer;
+    padding: 4px 0; list-style: none;
+  }
+  details summary::before { content: "▸ "; }
+  details[open] summary::before { content: "▾ "; }
+  .personne {
+    border: 1px solid #e3e8ee; border-radius: 10px;
+    padding: 10px; margin-top: 10px;
+  }
+  .personne .ligne { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .personne input[type=text] { flex: 1; min-width: 120px; }
+  .personne input[type=number] { width: 70px; text-align: center; }
+  .personne button { font-size: 18px; padding: 8px 14px; }
+  .ajout { display: flex; gap: 8px; margin-top: 12px; }
+  .ajout input { flex: 1; }
+  .ajout button { padding: 8px 16px; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="carte">
+  <h2>🎲 Tirage au sort pondéré</h2>
+
+  <p>Présents aujourd'hui, un nom par ligne :</p>
+  <textarea id="noms" placeholder="Alice&#10;Bob&#10;Chloé"></textarea>
+
+  <div class="boutons">
+    <button class="principal" id="btnTirer" onclick="tirer()">Tirer au sort</button>
+  </div>
+
+  <div class="roue-zone" id="roueZone">
+    <div class="pointeur"></div>
+    <canvas id="roue" width="500" height="500"></canvas>
+  </div>
+
+  <div id="resultat"></div>
+  <table id="tableau"></table>
+  <p class="note">Compteur = valeur actuelle. Chances = probabilité au prochain tirage parmi les présents (compteur + 1). Les absents (en gris) gardent leur compteur.</p>
+</div>
+
+<div class="carte">
+  <details id="gestion">
+    <summary>⚙️ Gérer les personnes</summary>
+
+    <div class="ajout">
+      <input type="text" id="nouveauNom" placeholder="Ajouter une personne">
+      <button onclick="ajouterPersonne()">Ajouter</button>
+    </div>
+
+    <div id="listeGestion"></div>
+
+    <div class="boutons">
+      <button id="btnReset" onclick="reinitialiser()">Tout remettre à 0</button>
+      <button class="danger" onclick="toutOublier()">Tout supprimer</button>
+    </div>
+  </details>
+</div>
+
+<script>
+let compteurs = JSON.parse(localStorage.getItem("compteurs") || "{}");
+let presents = JSON.parse(localStorage.getItem("presents") || "null");
+if (presents === null) presents = Object.keys(compteurs);
+
+document.getElementById("noms").value = presents.join("\n");
+afficher();
+afficherGestion();
+
+const COULEURS = ["#e6194b","#3cb44b","#4363d8","#f58231","#911eb4",
+                  "#17a2b8","#f032e6","#9a6324","#808000","#008080"];
+let angleActuel = 0;
+let enRotation = false;
+
+function echapper(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function lireNoms() {
+  const liste = document.getElementById("noms").value
+    .split("\n").map(n => n.trim()).filter(n => n);
+  return [...new Set(liste)];
+}
+
+function dessinerRoue(noms, poidsTirage, angle) {
+  const canvas = document.getElementById("roue");
+  const ctx = canvas.getContext("2d");
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const rayon = cx - 6;
+  const total = noms.reduce((s, n) => s + poidsTirage[n], 0);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let debut = angle;
+
+  noms.forEach((nom, i) => {
+    const part = (poidsTirage[nom] / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rayon, debut, debut + part);
+    ctx.closePath();
+    ctx.fillStyle = COULEURS[i % COULEURS.length];
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(debut + part / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 26px sans-serif";
+    ctx.fillText(nom.length > 12 ? nom.slice(0, 11) + "…" : nom, rayon - 16, 9);
+    ctx.restore();
+
+    debut += part;
+  });
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  ctx.strokeStyle = "#ccc";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function tirer() {
+  if (enRotation) return;
+  const noms = lireNoms();
+  if (noms.length === 0) return;
+
+  presents = noms;
+
+  noms.forEach(n => { if (!(n in compteurs)) compteurs[n] = 0; });
+  noms.forEach(n => compteurs[n] += 1);
+
+  const poidsTirage = {};
+  noms.forEach(n => poidsTirage[n] = Math.max(compteurs[n], 1));
+
+  const total = noms.reduce((s, n) => s + poidsTirage[n], 0);
+  let r = Math.random() * total;
+  let gagnant = noms[noms.length - 1];
+  for (const n of noms) {
+    r -= poidsTirage[n];
+    if (r < 0) { gagnant = n; break; }
+  }
+
+  compteurs[gagnant] -= 1;
+  sauver();
+  afficherGestion();
+
+  lancerRoue(noms, poidsTirage, gagnant, total);
+}
+
+function lancerRoue(noms, poidsTirage, gagnant, total) {
+  enRotation = true;
+  document.getElementById("btnTirer").disabled = true;
+  document.getElementById("btnReset").disabled = true;
+  document.getElementById("resultat").textContent = "";
+  document.getElementById("roueZone").classList.add("visible");
+
+  let cumul = 0;
+  for (const n of noms) {
+    if (n === gagnant) break;
+    cumul += poidsTirage[n];
+  }
+  const milieuPart = (cumul + poidsTirage[gagnant] / 2) / total * 2 * Math.PI;
+
+  const largeurPart = poidsTirage[gagnant] / total * 2 * Math.PI;
+  const decalage = (Math.random() - 0.5) * largeurPart * 0.7;
+  const toursComplets = 5 + Math.floor(Math.random() * 3);
+  const cible = -Math.PI / 2 - milieuPart - decalage;
+
+  const depart = angleActuel;
+  let delta = (cible - depart) % (2 * Math.PI);
+  if (delta < 0) delta += 2 * Math.PI;
+  const arrivee = depart + delta + toursComplets * 2 * Math.PI;
+
+  const duree = 4500;
+  const t0 = performance.now();
+
+  function frame(t) {
+    const p = Math.min((t - t0) / duree, 1);
+    const ease = 1 - Math.pow(1 - p, 4);
+    angleActuel = depart + (arrivee - depart) * ease;
+    dessinerRoue(noms, poidsTirage, angleActuel);
+
+    if (p < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      enRotation = false;
+      document.getElementById("btnTirer").disabled = false;
+      document.getElementById("btnReset").disabled = false;
+      document.getElementById("resultat").textContent = "🎉 " + gagnant;
+      afficher();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Gestion des personnes ---------- */
+
+function afficherGestion() {
+  const noms = Object.keys(compteurs);
+  let html = "";
+  if (noms.length === 0) {
+    html = '<p class="note">Aucune personne en mémoire pour l\'instant.</p>';
+  }
+  noms.forEach((n, i) => {
+    html += `
+      <div class="personne">
+        <div class="ligne">
+          <input type="text" id="nom_${i}" value="${echapper(n)}"
+                 onchange="renommer(${i})">
+          <button class="danger" onclick="supprimer(${i})">🗑</button>
+        </div>
+        <div class="ligne">
+          <span>Compteur :</span>
+          <button onclick="ajuster(${i}, -1)">−</button>
+          <input type="number" id="cpt_${i}" value="${compteurs[n]}"
+                 onchange="fixer(${i})">
+          <button onclick="ajuster(${i}, 1)">+</button>
+        </div>
+      </div>`;
+  });
+  document.getElementById("listeGestion").innerHTML = html;
+}
+
+function nomParIndex(i) {
+  return Object.keys(compteurs)[i];
+}
+
+function ajuster(i, delta) {
+  if (enRotation) return;
+  const n = nomParIndex(i);
+  compteurs[n] += delta;
+  sauver(); afficher(); afficherGestion();
+}
+
+function fixer(i) {
+  if (enRotation) return;
+  const n = nomParIndex(i);
+  const v = parseInt(document.getElementById("cpt_" + i).value, 10);
+  compteurs[n] = isNaN(v) ? 0 : v;
+  sauver(); afficher(); afficherGestion();
+}
+
+function renommer(i) {
+  if (enRotation) return;
+  const ancien = nomParIndex(i);
+  const nouveau = document.getElementById("nom_" + i).value.trim();
+  if (!nouveau || nouveau === ancien) { afficherGestion(); return; }
+  if (nouveau in compteurs) {
+    alert("Ce nom existe déjà.");
+    afficherGestion();
+    return;
+  }
+
+  // On reconstruit l'objet pour garder l'ordre
+  const refait = {};
+  Object.keys(compteurs).forEach(n => {
+    refait[n === ancien ? nouveau : n] = compteurs[n];
+  });
+  compteurs = refait;
+  presents = presents.map(n => n === ancien ? nouveau : n);
+  document.getElementById("noms").value = document.getElementById("noms").value
+    .split("\n").map(l => l.trim() === ancien ? nouveau : l).join("\n");
+
+  sauver(); afficher(); afficherGestion();
+}
+
+function supprimer(i) {
+  if (enRotation) return;
+  const n = nomParIndex(i);
+  if (!confirm("Supprimer " + n + " définitivement ?")) return;
+  delete compteurs[n];
+  presents = presents.filter(p => p !== n);
+  document.getElementById("noms").value = document.getElementById("noms").value
+    .split("\n").filter(l => l.trim() !== n).join("\n");
+  sauver(); afficher(); afficherGestion();
+}
+
+function ajouterPersonne() {
+  const champ = document.getElementById("nouveauNom");
+  const n = champ.value.trim();
+  if (!n) return;
+  if (n in compteurs) { alert("Ce nom existe déjà."); return; }
+  compteurs[n] = 0;
+  champ.value = "";
+  sauver(); afficher(); afficherGestion();
+}
+
+function reinitialiser() {
+  if (enRotation) return;
+  if (!confirm("Remettre tous les compteurs à 0 ?")) return;
+  Object.keys(compteurs).forEach(n => compteurs[n] = 0);
+  sauver(); afficher(); afficherGestion();
+  document.getElementById("resultat").textContent = "";
+  document.getElementById("roueZone").classList.remove("visible");
+}
+
+function toutOublier() {
+  if (enRotation) return;
+  if (!confirm("Supprimer toutes les personnes et tous les compteurs ?")) return;
+  compteurs = {};
+  presents = [];
+  document.getElementById("noms").value = "";
+  sauver(); afficher(); afficherGestion();
+  document.getElementById("resultat").textContent = "";
+  document.getElementById("roueZone").classList.remove("visible");
+}
+
+function sauver() {
+  localStorage.setItem("compteurs", JSON.stringify(compteurs));
+  localStorage.setItem("presents", JSON.stringify(presents));
+}
+
+function afficher() {
+  const totalPresents = presents.reduce(
+    (s, n) => s + Math.max((compteurs[n] ?? 0) + 1, 1), 0);
+  let html = "<tr><th>Nom</th><th>Compteur</th><th>Chances</th></tr>";
+
+  presents.forEach(n => {
+    const c = compteurs[n] ?? 0;
+    const pct = totalPresents ? Math.round(Math.max(c + 1, 1) / totalPresents * 100) : 0;
+    html += `<tr><td>${echapper(n)}</td><td>${c}</td><td>${pct} %</td></tr>`;
+  });
+  Object.keys(compteurs).filter(n => !presents.includes(n)).forEach(n => {
+    html += `<tr class="absent"><td>${echapper(n)} (absent)</td><td>${compteurs[n]}</td><td>–</td></tr>`;
+  });
+
+  document.getElementById("tableau").innerHTML = html;
+}
+</script>
+</body>
+</html>
